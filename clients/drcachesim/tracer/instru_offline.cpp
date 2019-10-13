@@ -39,6 +39,7 @@
 #include "drcovlib.h"
 #include "instru.h"
 #include "../common/trace_entry.h"
+#include <algorithm>
 #include <new>
 #include <limits.h> /* for USHRT_MAX */
 #include <stddef.h> /* for offsetof */
@@ -284,7 +285,14 @@ offline_instru_t::append_unit_header(byte *buf_ptr, thread_id_t tid)
     entry->timestamp.type = OFFLINE_TYPE_TIMESTAMP;
     entry->timestamp.usec = instru_t::get_timestamp();
     new_buf += sizeof(*entry);
-    new_buf += append_marker(new_buf, TRACE_MARKER_TYPE_CPU_ID, instru_t::get_cpu_id());
+
+    // Essentially, if CPUID fails, we just ignore the error and return 0
+    //
+    // We can live without the cpu id for tracing, but we don't want to
+    // trigger an assert in append_marker
+    new_buf += append_marker(new_buf,
+                             TRACE_MARKER_TYPE_CPU_ID,
+                             std::max(0, instru_t::get_cpu_id()));
     return (int)(new_buf - buf_ptr);
 }
 
